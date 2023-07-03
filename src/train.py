@@ -28,92 +28,95 @@ class SaveBestModel(object):
 model = Network()
 
 lr = 1e-3
-loss_func = loss_func = nn.MSELoss()
+loss_func = nn.MSELoss()
 metric_func = nn.L1Loss()
 
 optimizer = torch.optim.Adam(model.parameters,lr = lr)
 
+
 epochs = 2000
 
-SBM = SaveBestModel()
+def train(model,train_dataloader,vali_dataloader,
+          epochs,loss_func,metric_func,optimizer,filename = 'best_model.pth'):
 
-train_loss = 0.0
-metric_loss = 0.0
+    SBM = SaveBestModel()
 
-hist_vali_loss = []
-hist_train_loss = []
-hist_vali_metric = []
-hist_train_metric = []
+    train_loss = 0.0
+    metric_loss = 0.0
 
-filename = 'best_model.pth'
-
-print("Starting training!")
-for epoch in range(epochs):
-  train_loss = 0.0
-  train_metric = 0.0 
-  vali_loss = 0.0
-  vali_metric = 0.0 
-  
-  counter = 0
-  total_time = 0
-  model.train()
-  for xb,yb in train_dataloader:
-    start = time.time()
-
-    L = learned_lagrangian(model)
-    out = torch.vmap(partial(equation_of_motion,L))(xb)
-
-    optimizer.zero_grad()
-    loss = loss_func(out,yb)
-    metric = metric_func(out,yb)
-    loss.backward()
-    optimizer.step()
-
-    counter +=1
-    train_loss += loss.item()
-    train_metric += metric.item()
-    
-    end = time.time() - start
-    total_time += end
-
-  train_loss /= counter
-  train_metric /= counter
-  hist_train_loss.append(train_loss)
-  hist_train_metric.append(train_metric)
+    hist_vali_loss = []
+    hist_train_loss = []
+    hist_vali_metric = []
+    hist_train_metric = []
 
 
-  counter = 0
+    print("Starting training!")
+    for epoch in range(epochs):
+        train_loss = 0.0
+        train_metric = 0.0 
+        vali_loss = 0.0
+        vali_metric = 0.0 
+        
+        counter = 0
+        total_time = 0
+        model.train()
+        for xb,yb in train_dataloader:
+            start = time.time()
 
-  model.eval()
-  with torch.no_grad():
-    for xb,yb in vali_dataloader:
+            L = learned_lagrangian(model)
+            out = torch.vmap(partial(equation_of_motion,L))(xb)
 
-      start = time.time()
+            optimizer.zero_grad()
+            loss = loss_func(out,yb)
+            metric = metric_func(out,yb)
+            loss.backward()
+            optimizer.step()
 
-      L = learned_lagrangian(model)
-      out = torch.vmap(partial(equation_of_motion,L))(xb)
+            counter +=1
+            train_loss += loss.item()
+            train_metric += metric.item()
+            
+            end = time.time() - start
+            total_time += end
 
-      loss = loss_func(out,yb)
-      metric = metric_func(out,yb)
-      counter +=1
-      vali_loss += loss.item()
-      vali_metric += metric.item()
-      counter += 1
+        train_loss /= counter
+        train_metric /= counter
+        hist_train_loss.append(train_loss)
+        hist_train_metric.append(train_metric)
 
-      end = time.time() - start
-      total_time += end
-      
 
-  vali_loss /= counter
-  vali_metric /= counter
+        counter = 0
 
-  hist_vali_loss.append(vali_loss)
-  hist_vali_metric.append(vali_metric)
+        model.eval()
+        with torch.no_grad():
+            for xb,yb in vali_dataloader:
 
-  print("epoch:%d time taken:%lf\nTrain loss:%lf Validation metric:%lf\nValidation loss:%lf Validation metric:%lf"%(epoch,total_time,train_loss,train_metric,vali_loss,vali_metric))
+                start = time.time()
 
-  if SBM(vali_loss,epoch,model,optimizer,loss_func,metric_func,filename):
-    print("best model saved")
-  print("\n")
+                L = learned_lagrangian(model)
+                out = torch.vmap(partial(equation_of_motion,L))(xb)
+
+                loss = loss_func(out,yb)
+                metric = metric_func(out,yb)
+                counter +=1
+                vali_loss += loss.item()
+                vali_metric += metric.item()
+                counter += 1
+
+                end = time.time() - start
+                total_time += end
+            
+
+        vali_loss /= counter
+        vali_metric /= counter
+
+        hist_vali_loss.append(vali_loss)
+        hist_vali_metric.append(vali_metric)
+
+        print("epoch:%d time taken:%lf\nTrain loss:%lf Validation metric:%lf\nValidation loss:%lf Validation metric:%lf"%(epoch,total_time,train_loss,train_metric,vali_loss,vali_metric))
+
+        if SBM(vali_loss,epoch,model,optimizer,loss_func,metric_func,filename):
+            print("best model saved")
+        print("\n")
 
 
