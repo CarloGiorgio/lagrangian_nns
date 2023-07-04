@@ -3,7 +3,7 @@
 
 from jax.experimental import stax
 
-def mlp(args):
+def mlp(args): 
     return stax.serial(
         stax.Dense(args.hidden_dim),
         stax.Softplus,

@@ -6,9 +6,26 @@ from torch import nn
 from scipy.integrate import odeint
 
 
+def harmonic_oscillator(state,t = 0,k = 1,m = 1):
+  q,q_t = state
+  q_tt = -k/m*q
+  return np.array([q_t,q_tt])
+
+def coupled_HO(state,t = None,alpha = 0.5):
+  q1,q2,q_t1,q_t2 = state
+
+  return np.array([q_t1,q_t2,-(q1+alpha*q2),-(q2+alpha*q1)])
+
+
+def single_pendulum(state,t = None,l = 1,g = 9.81):
+  q,q_t = state
+  q_tt = -g/l*np.sin(q)
+  return np.array([q_t,q_tt])
+
+
 def double_pendulum(state,t=0, m1=1, m2=1, l1=1, l2=1, g=9.8):
-    # evaluate analyticaly the velocity from the equation of motion
-    # this is done by means of the equation of motion from the lagrangian
+  # evaluate analyticaly the velocity from the equation of motion
+  # this is done by means of the equation of motion from the lagrangian
     
   t1, t2, w1, w2 = state
   a1 = (l2 / l1) * (m2 / (m1 + m2)) * np.cos(t1 - t2)
@@ -54,6 +71,7 @@ def normalize_angle(state):
 def v_norm_angle(x):
     # vectorized angle normalization
     return np.concatenate(((x[:,:2] + np.pi)%(2*np.pi) -np.pi,x[:,2:]),axis = 1)
+
 
 
 
